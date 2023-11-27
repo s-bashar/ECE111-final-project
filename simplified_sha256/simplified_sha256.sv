@@ -64,7 +64,8 @@ assign tstep = (i - 1);
 function logic [15:0] determine_num_blocks(input logic [31:0] size);
 
   // Student to add function implementation
-
+logic bits_total=32*NUM_OF_WORDS+64; //get numbers of bits for our word input and the 64 bit message that we need to send in the last block
+return (bits_of_words+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
  
 endfunction
 
