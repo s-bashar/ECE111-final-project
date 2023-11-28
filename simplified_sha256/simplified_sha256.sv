@@ -49,9 +49,9 @@ parameter int k[0:63] = '{
 
 // Generate request to memory
 // for reading from memory to get original message
-// for writing final computed has value
+// for writing final computed hash value
 assign memory_clk = clk;
-assign memory_addr = present_addr + next_offset;
+assign memory_addr = present_addr + offset;
 assign memory_we = enable_write;
 assign memory_write_data = present_write_data;
 
@@ -61,23 +61,21 @@ assign tstep = (i - 1);
 
 // Note : Function defined are for reference purpose. Feel free to add more functions or modify below.
 // Function to determine number of blocks in memory to fetch
-function logic [15:0] determine_num_blocks(input logic [31:0] size);
 
-  // Student to add function implementation
-logic bits_total=32*NUM_OF_WORDS+64; //get numbers of bits for our word input and the 64 bit message that we need to send in the last block
-return (bits_of_words+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
- 
-endfunction
+function logic [15:0] determine_num_blocks(input logic [31:0] size);
+	logic bits_total=32*NUM_OF_WORDS+64; //get numbers of bits for our word input and the 64 bit message that we need to send in the last block
+	return (bits_of_words+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
+ endfunction
 
 
 // SHA256 hash round
-function logic [255:0] sha256_op(input logic [31:0] a, b, c, d, e, f, g, h, w,
-                                 input logic [7:0] t);
+function logic [255:0] sha256_op(input logic [31:0] a, b, c, d, e, f, g, h, w, input logic [7:0] t);
     logic [31:0] S1, S0, ch, maj, t1, t2; // internal signals
-begin
-    
-    sha256_op = ??;
-end
+	
+	begin
+		
+		sha256_op = ??;
+	end
 endfunction
 
 
@@ -126,8 +124,17 @@ always_comb begin
 	  case (state)
 		// Initialize hash values h0 to h7 and a to h, other variables and memory we, address offset, etc
 		IDLE: begin 
+			offset = 0;
+			hash0 = 32'h6a09e667;
+			hash1 = 32'hbb67ae85;
+			hash2 = 32'h3c6ef372;
+			hash3 = 32'ha54ff53a;
+			hash4 = 32'h510e527f;
+			hash5 = 32'h9b05688c;
+			hash6 = 32'h1f83d9ab;
+			hash7 = 32'h5be0cd19;
 			if(start) begin 
-
+				next_state = BLOCK;
 		   end
 		end
 
