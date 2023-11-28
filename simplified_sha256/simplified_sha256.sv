@@ -127,13 +127,31 @@ always_comb begin
 		// Initialize hash values h0 to h7 and a to h, other variables and memory we, address offset, etc
 		IDLE: begin 
 			if(start) begin 
-
-		   end
+		   next_offset=0;					//by setting offset and present addr here we can start paralizing since we have to wait 2 cycles till mem address is ready 
+			present_addr=input_addr;
+			end
 		end
 
-		// SHA-256 FSM 
-		// Get a BLOCK from the memory, COMPUTE Hash output using SHA256 function    
-		// and write back hash value back to memory
+		READ: begin
+		enable_write=0; //this is 0 becasue we are reading...
+		//present_addr=input_addr; instead of doing that line here I did it when we declared present_addr earlier 
+		if(next_offset==0)begin
+		next_offse=1;
+		
+		
+		end else if(next_offset<16)begin
+		w[next_offset]=memory_read_data;//first 16 elemnts(words) of W are coming from memory 
+		next_offset++;
+		
+		
+		
+		end else begin
+		state=compute; //we are readign to move to compute state for this block 
+		end
+		
+		//still need to check if we are at last block...
+	
+		end
 		BLOCK: begin
 		// Fetch message in 512-bit block size
 		// For each of 512-bit block initiate hash value computation
