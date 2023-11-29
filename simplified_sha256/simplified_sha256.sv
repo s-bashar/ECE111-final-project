@@ -131,6 +131,14 @@ always_comb begin
 		IDLE: begin 
 			if(start) begin 
 		   next_offset=0;					//by setting offset and present addr here we can start paralizing since we have to wait 2 cycles till mem address is ready 
+			hash0 = 32'h6a09e667;
+			hash1 = 32'hbb67ae85;
+			hash2 = 32'h3c6ef372;
+			hash3 = 32'ha54ff53a;
+			hash4 = 32'h510e527f;
+			hash5 = 32'h9b05688c;
+			hash6 = 32'h1f83d9ab;
+			hash7 = 32'h5be0cd19;
 			present_addr=input_addr;
 			size message=32*NUM_OF_WORDS; //get the decimal value for how many bits are in the message
 			size_message=64'b(size_message); //binary representation of this decimal value 
