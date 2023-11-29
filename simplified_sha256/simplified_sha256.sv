@@ -26,12 +26,12 @@ logic [ 7:0] i, j;
 logic [15:0] offset; // in word address
 logic [ 7:0] num_blocks;
 logic        enable_write;
-logic [15:0] present_addr;
+logic [15:0] present_addr; //setting present addr
 logic [31:0] present_write_data;
 logic [512:0] data_read;
 logic [ 7:0] tstep;
-
-
+logic current_block;
+logic [63:0]size_message; //need size of message for last block
 
 
 // SHA256 K constants
@@ -49,9 +49,9 @@ parameter int k[0:63] = '{
 
 // Generate request to memory
 // for reading from memory to get original message
-// for writing final computed hash value
+// for writing final computed has value
 assign memory_clk = clk;
-assign memory_addr = present_addr + offset;
+assign memory_addr = present_addr + next_offset;
 assign memory_we = enable_write;
 assign memory_write_data = present_write_data;
 
@@ -61,21 +61,26 @@ assign tstep = (i - 1);
 
 // Note : Function defined are for reference purpose. Feel free to add more functions or modify below.
 // Function to determine number of blocks in memory to fetch
-
 function logic [15:0] determine_num_blocks(input logic [31:0] size);
-	logic bits_total=32*NUM_OF_WORDS+64; //get numbers of bits for our word input and the 64 bit message that we need to send in the last block
-	return (bits_of_words+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
- endfunction
+
+  // Student to add function implementation
+
+logic bits_total=32*NUM_OF_WORDS+64+1; //get numbers of bits for our word input and the 64 bit message that we need to send in the last block
+return (bits_total+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
+  
+ 
+
+endfunction
 
 
 // SHA256 hash round
-function logic [255:0] sha256_op(input logic [31:0] a, b, c, d, e, f, g, h, w, input logic [7:0] t);
+function logic [255:0] sha256_op(input logic [31:0] a, b, c, d, e, f, g, h, w,
+                                 input logic [7:0] t);
     logic [31:0] S1, S0, ch, maj, t1, t2; // internal signals
-	
-	begin
-		
-		sha256_op = ??;
-	end
+begin
+    
+    sha256_op = ??;
+end
 endfunction
 
 
@@ -127,36 +132,69 @@ always_comb begin
 			if(start) begin 
 		   next_offset=0;					//by setting offset and present addr here we can start paralizing since we have to wait 2 cycles till mem address is ready 
 			present_addr=input_addr;
+			size message=32*NUM_OF_WORDS; //get the decimal value for how many bits are in the message
+			size_message=64'b(size_message); //binary representation of this decimal value 
 			end
 		end
 
 		READ: begin
 		enable_write=0; //this is 0 becasue we are reading...
-		//present_addr=input_addr; instead of doing that line here I did it when we declared present_addr earlier 
-		if(next_offset==0)begin
-		next_offse=1;
+		if(current_block!=num_blocks)begin //checking to see if we are on the last block or not 
+		if(next_offset==0)begin //pre loading offset 1 now so its ready when we need
+		next_offset=1;
 		
-		
-		end else if(next_offset<16)begin
+		end else if(integer j < 16)begin //using j that way we can increment next offset freely and not worry about next block's loop, j will take care of that 
 		w[next_offset]=memory_read_data;//first 16 elemnts(words) of W are coming from memory 
 		next_offset++;
-		
-		
+		j++;
 		
 		end else begin
-		state=compute; //we are readign to move to compute state for this block 
+		state=compute; //we are ready to move to compute state for this block since it is ready 
+		j=0;
+		current_block++;
 		end
+
+		end 
+		else if(current_block==num_blocks)begin //checking to see if we are at last block
+		if(next_offset==0)begin //pre loading offset 1 now so its ready when we need
+		next_offset=1;
 		
-		//still need to check if we are at last block...
-	
+		
+		end else if(j<(NUM_OF_WORDS%16))begin//num words mod 16 gives us however many words will be going in the last block 
+		w[next_offset]=memory_read_data;//putting in the remainder of the words left  
+		next_offset++;
+		j++;		
+		
+		end else if(j=(NUM_OF_WORDS%16))begin
+		w[next_offset]=32'b1; //this is the first padding bit which is a 1
+		next_offset++;
+		j++;
+		end else if(j< 14)begin //now we will fill from the 1 till 2 places before the end since we need the last 2 elements (64 bits) to be the size of the message
+		w[next_offset]=32'b0;
+		next_offset++;
+		j++;
+		end else if(j==14)begin //first 32 bits of input message size 
+		w[next_offset]=size_message[63:32];
+		next_offset++;
+		j++;
+		end else if(j==15)begin //last 32 bits of input message size
+		w[next_offset]=size_message[31:0];
+		next_offset++;
+		j++;
+		end else begin
+		state=compute;
+		j=0;
+		current_block++;
 		end
-		
-		
-		
+		end
+		end
 		// SHA-256 FSM 
 		// Get a BLOCK from the memory, COMPUTE Hash output using SHA256 function    
 		// and write back hash value back to memory
 		BLOCK: begin
+		//do padding and stuff for last block
+		
+		end
 		// Fetch message in 512-bit block size
 		// For each of 512-bit block initiate hash value computation
 			
