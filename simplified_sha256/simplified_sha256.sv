@@ -31,7 +31,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 	logic [31:0] present_write_data;
 	logic [512:0] data_read;
 	logic [ 7:0] tstep;
-	logic current_block;
+	logic [ 7:0]current_block;
 	logic [63:0]size_message; //need size of message for last block
 
 	// SHA256 K constants
@@ -117,10 +117,11 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						hash7 <= 32'h5be0cd19;
 						present_addr <= input_addr;
 						size_message <= 32*NUM_OF_WORDS; //get the decimal value for how many bits are in the message
-						size_message <= size_message; //binary representation of this decimal value 
 						j <= 0;
+						state <= READ;
+						current_block<=1;
 					end
-					state <= READ;
+					
 				end
 
 				READ: begin
@@ -129,7 +130,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						if(next_offset == 0) //pre loading offset 1 now so its ready when we need
 							next_offset <= 1;
 						else if(j < 16) begin //using j that way we can increment next offset freely and not worry about next block's loop, j will take care of that 
-							w[next_offset] <= memory_read_data;//first 16 elemnts(words) of W are coming from memory 
+							w[j] <= memory_read_data;//first 16 elemnts(words) of W are coming from memory 
 							next_offset++;
 							j++;
 						end else begin
@@ -141,27 +142,30 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						if(next_offset == 0) //pre loading offset 1 now so its ready when we need
 							next_offset <= 1;
 						else if(j < (NUM_OF_WORDS%16)) begin//num words mod 16 gives us however many words will be going in the last block 
-							w[next_offset] <= memory_read_data;//putting in the remainder of the words left  
+							w[j] <= memory_read_data;//putting in the remainder of the words left  
 							next_offset++;
 							j++;		
 						end else if(j == (NUM_OF_WORDS%16)) begin
-							w[next_offset] <= {1'b1, 31'b0}; //this is the first padding bit which is a 1
+							w[j] <= {1'b1, 31'b0}; //this is the first padding bit which is a 1
 							next_offset++;
 							j++;
 						end else if(j < 14) begin //now we will fill from the 1 till 2 places before the end since we need the last 2 elements (64 bits) to be the size of the message
-							w[next_offset] <= 0;
+							w[j] <= 0;
 							next_offset++;
 							j++;
 						end else if(j == 14) begin //first 32 bits of input message size 
-							w[next_offset] <= size_message[63:32];
+							w[j] <= size_message[63:32];
 							next_offset++;
 							j++;
 						end else if(j == 15) begin //last 32 bits of input message size
-							w[next_offset] <= size_message[31:0];
+							w[j] <= size_message[31:0];
 							next_offset++;
 							j++;
+						end else if(current_block>num_blocks)begin
+						state<=IDLE;
 						end else begin
 							state <= COMPUTE;
+							$display(w);
 							j <= 0;
 							current_block++;
 						end
@@ -177,6 +181,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 				// move to WRITE stage
 				COMPUTE: begin
 					state <= READ;
+					
 				end
 
 				// h0 to h7 each are 32 bit hashes, which makes up total 256 bit value
