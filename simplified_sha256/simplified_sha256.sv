@@ -162,10 +162,9 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 							next_offset++;
 							j++;
 						end else if(current_block>num_blocks)begin
-						state<=IDLE;
-						end else begin
+						state<=WRITE; //there is no more blocks to read 
+						end else if(j==16)begin
 							state <= COMPUTE;
-							$display(w);
 							j <= 0;
 							current_block++;
 						end
