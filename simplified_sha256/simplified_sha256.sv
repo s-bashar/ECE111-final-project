@@ -65,17 +65,21 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 		determine_num_blocks = (32*NUM_OF_WORDS+64+1+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
 	endfunction
 
-/*
+
 	// SHA256 hash round
-	function logic [255:0] sha256_op(input logic [31:0] a, b, c, d, e, f, g, h, w,
-									 input logic [7:0] t);
+	function logic [255:0] sha256_op(input logic [31:0] a, b, c, d, e, f, g, h, w, input logic [7:0] t);
 		logic [31:0] S1, S0, ch, maj, t1, t2; // internal signals
 	begin
-		
-		sha256_op = ??;
+		S0 = ror(a, 2) ^ ror(a, 13) ^ ror(a, 22);
+		maj = (a & b) ^ (a & c) ^ (b & c);
+		t2 = S0 + maj;
+		S1 = ror(e, 6) ^ ror(e, 11) ^ ror(e, 25);
+		ch = (e & f) ^ ((~e) & g);
+		t1 = h + S1 + ch + k[t] + w;
+		sha256_op = {t1 + t2, a, b, c, d + t1, e, f, g};
 	end
 	endfunction
-*/
+
 
 
 	// Right Rotation Example : right rotate input x by r
@@ -88,14 +92,11 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 	// final value after right rotate = 8888 1111 ffff 2222 3333 4444 6666 7777
 	// Right rotation function
 
-/*
-	function logic [31:0] ror(input logic [31:0] in,
-									  input logic [7:0] s);
-	begin
-	   
-	end
+	function logic [31:0] ror(input logic [31:0] in, input logic [7:0] s);
+		begin
+		   ror = (x >> r) | (x << (32-r));
+		end
 	endfunction
-*/
 
 	always_ff @(posedge clk, negedge rst_n) begin
 		if (!rst_n) begin
@@ -162,7 +163,6 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						end else begin
 							state <= COMPUTE;
 							j <= 0;
-							$display(w);
 							current_block++;
 						end
 					end
@@ -176,8 +176,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 				// there are still number of message blocks available in memory otherwise
 				// move to WRITE stage
 				COMPUTE: begin
-					$display("COMPUTE");
-				// 64 processing rounds steps for 512-bit block 
+					state <= READ;
 				end
 
 				// h0 to h7 each are 32 bit hashes, which makes up total 256 bit value
