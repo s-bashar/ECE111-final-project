@@ -94,7 +94,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 
 	function logic [31:0] ror(input logic [31:0] in, input logic [7:0] s);
 		begin
-		   ror = (x >> r) | (x << (32-r));
+		   ror = (in >> s) | (in << (32-s));
 		end
 	endfunction
 
