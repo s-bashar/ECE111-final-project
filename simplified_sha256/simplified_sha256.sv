@@ -62,8 +62,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 	// Note : Function defined are for reference purpose. Feel free to add more functions or modify below.
 	// Function to determine number of blocks in memory to fetch
 	function logic [15:0] determine_num_blocks(input logic [31:0] size);
-		logic bits_total=32*NUM_OF_WORDS+64+1; //get numbers of bits for our word input and the 64 bit message that we need to send in the last block
-		determine_num_blocks = (bits_total+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
+		determine_num_blocks = (32*NUM_OF_WORDS+64+1+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
 	endfunction
 
 /*
