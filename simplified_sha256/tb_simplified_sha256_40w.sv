@@ -1,4 +1,4 @@
-module tb_simplified_sha256();
+module tb_simplified_sha256_40w;
 
 logic          clk, reset_n, start;
 logic   [15:0] message_addr, output_addr;
@@ -28,8 +28,9 @@ parameter integer SIZE = NUM_OF_WORDS * 32;
 logic [7:0] blocks;
 assign blocks = ((NUM_OF_WORDS+2)/16) + 1;
 // instantiate your design
-simplified_sha256 #(.NUM_OF_WORDS(NUM_OF_WORDS)) simplified_sha256_inst 
-(clk, reset_n, start, message_addr, output_addr, done, mem_clk, mem_we, mem_addr, mem_write_data, mem_read_data);
+simplified_sha256 #(.NUM_OF_WORDS(NUM_OF_WORDS)) simplified_sha256_inst(.clk(clk), .rst_n(reset_n), .start(start),
+.input_addr(message_addr), .hash_addr(output_addr), .done(done), .memory_clk(mem_clk), .enable_write(mem_we),
+ .memory_addr(mem_addr), .memory_write_data(mem_write_data), .memory_read_data(mem_read_data));
 
 // SHA256 K constants
 parameter int k[0:63] = '{

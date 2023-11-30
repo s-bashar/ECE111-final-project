@@ -6,10 +6,12 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
  output logic [31:0] memory_write_data,
  input logic [31:0] memory_read_data);
 
+// (clk, reset_n, start, message_addr, output_addr, done, mem_clk,
+// mem_we, mem_addr, mem_write_data, mem_read_data);
 // FSM state variables 
-	enum logic [2:0] {IDLE, BLOCK, COMPUTE, WRITE} state,next_state;
+	enum logic [2:0] {IDLE, READ, COMPUTE, WRITE} state,next_state;
 
-	parameter integer SIZE = ??; 
+	// parameter integer SIZE = 0; 
 
 	// NOTE : Below mentioned frame work is for reference purpose.
 	// Local variables might not be complete and you might have to add more variables
@@ -23,16 +25,14 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 	logic [31:0] hash0, hash1, hash2, hash3, hash4, hash5, hash6, hash7;
 	logic [31:0] A, B, C, D, E, F, G, H;
 	logic [ 7:0] i, j;
-	logic [15:0] offset; // in word address
+	logic [15:0] next_offset; // in word address
 	logic [ 7:0] num_blocks;
-	logic        enable_write;
 	logic [15:0] present_addr; //setting present addr
 	logic [31:0] present_write_data;
 	logic [512:0] data_read;
 	logic [ 7:0] tstep;
 	logic current_block;
 	logic [63:0]size_message; //need size of message for last block
-	integer j;
 
 	// SHA256 K constants
 	parameter int k[0:63] = '{
@@ -63,13 +63,10 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 	// Function to determine number of blocks in memory to fetch
 	function logic [15:0] determine_num_blocks(input logic [31:0] size);
 		logic bits_total=32*NUM_OF_WORDS+64+1; //get numbers of bits for our word input and the 64 bit message that we need to send in the last block
-	determine_num_blocks =  (bits_total+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
-	  
-	 
-
+		determine_num_blocks = (bits_total+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
 	endfunction
 
-
+/*
 	// SHA256 hash round
 	function logic [255:0] sha256_op(input logic [31:0] a, b, c, d, e, f, g, h, w,
 									 input logic [7:0] t);
@@ -79,7 +76,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 		sha256_op = ??;
 	end
 	endfunction
-
+*/
 
 
 	// Right Rotation Example : right rotate input x by r
@@ -92,112 +89,108 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 	// final value after right rotate = 8888 1111 ffff 2222 3333 4444 6666 7777
 	// Right rotation function
 
+/*
 	function logic [31:0] ror(input logic [31:0] in,
 									  input logic [7:0] s);
 	begin
 	   
 	end
 	endfunction
-
+*/
 
 	always_ff @(posedge clk, negedge rst_n) begin
-	  if (!rst_n) begin
-		state <= IDLE;
-	  end else begin 
-		case (state)
-			// Initialize hash values h0 to h7 and a to h, other variables and memory we, address offset, etc
-			IDLE: begin 
-				if(start) begin 
-					next_offset <= 0;					//by setting offset and present addr here we can start paralizing since we have to wait 2 cycles till mem address is ready 
-					hash0 <= 32'h6a09e667;
-					hash1 <= 32'hbb67ae85;
-					hash2 <= 32'h3c6ef372;
-					hash3 <= 32'ha54ff53a;
-					hash4 <= 32'h510e527f;
-					hash5 <= 32'h9b05688c;
-					hash6 <= 32'h1f83d9ab;
-					hash7 <= 32'h5be0cd19;
-					present_addr <= input_addr;
-					size message <= 32*NUM_OF_WORDS; //get the decimal value for how many bits are in the message
-					size_message <= 64'b(size_message); //binary representation of this decimal value 
-					j <= 0;
-				end
-				state <= READ;
-			end
-
-			READ: begin
-				enable_write <= 0; //this is 0 becasue we are reading...
-				if(current_block != num_blocks) begin //checking to see if we are on the last block or not 
-					if(next_offset == 0) //pre loading offset 1 now so its ready when we need
-						next_offset <= 1;
-					else if(j < 16) begin //using j that way we can increment next offset freely and not worry about next block's loop, j will take care of that 
-						w[next_offset] <= memory_read_data;//first 16 elemnts(words) of W are coming from memory 
-						next_offset++;
-						j++;
-					end else begin
-						state <= compute; //we are ready to move to compute state for this block since it is ready 
+		if (!rst_n) begin
+			state <= IDLE;
+		end else begin 
+			case (state)
+				// Initialize hash values h0 to h7 and a to h, other variables and memory we, address offset, etc
+				IDLE: begin 
+					if(start) begin 
+						next_offset <= 0;					//by setting offset and present addr here we can start paralizing since we have to wait 2 cycles till mem address is ready 
+						hash0 <= 32'h6a09e667;
+						hash1 <= 32'hbb67ae85;
+						hash2 <= 32'h3c6ef372;
+						hash3 <= 32'ha54ff53a;
+						hash4 <= 32'h510e527f;
+						hash5 <= 32'h9b05688c;
+						hash6 <= 32'h1f83d9ab;
+						hash7 <= 32'h5be0cd19;
+						present_addr <= input_addr;
+						size_message <= 32*NUM_OF_WORDS; //get the decimal value for how many bits are in the message
+						size_message <= size_message; //binary representation of this decimal value 
 						j <= 0;
-						current_block++;
 					end
-				end else if(current_block == num_blocks) begin //checking to see if we are at last block
-					if(next_offset == 0) //pre loading offset 1 now so its ready when we need
-						next_offset <= 1;
-					else if(j < (NUM_OF_WORDS%16)) begin//num words mod 16 gives us however many words will be going in the last block 
-						w[next_offset] <= memory_read_data;//putting in the remainder of the words left  
-						next_offset++;
-						j++;		
-					end else if(j == (NUM_OF_WORDS%16)) begin
-						w[next_offset] <= 4294967296; //this is the first padding bit which is a 1
-						next_offset++;
-						j++;
-					end else if(j < 14) begin //now we will fill from the 1 till 2 places before the end since we need the last 2 elements (64 bits) to be the size of the message
-						w[next_offset] <= 0;
-						next_offset++;
-						j++;
-					end else if(j == 14) begin //first 32 bits of input message size 
-						w[next_offset] <= size_message[63:32];
-						next_offset++;
-						j++;
-					end else if(j == 15) begin //last 32 bits of input message size
-						w[next_offset] <= size_message[31:0];
-						next_offset++;
-						j++;
-					end else begin
-						state <= COMPUTE;
-						j <= 0;
-						$display(w);
-						current_block++;
+					state <= READ;
+				end
+
+				READ: begin
+					enable_write <= 0; //this is 0 becasue we are reading...
+					if(current_block != num_blocks) begin //checking to see if we are on the last block or not 
+						if(next_offset == 0) //pre loading offset 1 now so its ready when we need
+							next_offset <= 1;
+						else if(j < 16) begin //using j that way we can increment next offset freely and not worry about next block's loop, j will take care of that 
+							w[next_offset] <= memory_read_data;//first 16 elemnts(words) of W are coming from memory 
+							next_offset++;
+							j++;
+						end else begin
+							state <= COMPUTE; //we are ready to move to compute state for this block since it is ready 
+							j <= 0;
+							current_block++;
+						end
+					end else if(current_block == num_blocks) begin //checking to see if we are at last block
+						if(next_offset == 0) //pre loading offset 1 now so its ready when we need
+							next_offset <= 1;
+						else if(j < (NUM_OF_WORDS%16)) begin//num words mod 16 gives us however many words will be going in the last block 
+							w[next_offset] <= memory_read_data;//putting in the remainder of the words left  
+							next_offset++;
+							j++;		
+						end else if(j == (NUM_OF_WORDS%16)) begin
+							w[next_offset] <= {1'b1, 31'b0}; //this is the first padding bit which is a 1
+							next_offset++;
+							j++;
+						end else if(j < 14) begin //now we will fill from the 1 till 2 places before the end since we need the last 2 elements (64 bits) to be the size of the message
+							w[next_offset] <= 0;
+							next_offset++;
+							j++;
+						end else if(j == 14) begin //first 32 bits of input message size 
+							w[next_offset] <= size_message[63:32];
+							next_offset++;
+							j++;
+						end else if(j == 15) begin //last 32 bits of input message size
+							w[next_offset] <= size_message[31:0];
+							next_offset++;
+							j++;
+						end else begin
+							state <= COMPUTE;
+							j <= 0;
+							$display(w);
+							current_block++;
+						end
 					end
 				end
-			end
-			
-			BLOCK: begin
-			//do padding and stuff for last block
-			end
-			// Fetch message in 512-bit block size
-			// For each of 512-bit block initiate hash value computation
-			
-			end
-			
-			// For each block compute hash function
-			// Go back to BLOCK stage after each block hash computation is completed and if
-			// there are still number of message blocks available in memory otherwise
-			// move to WRITE stage
-			COMPUTE: begin
-			$display("COMPUTE");
-			// 64 processing rounds steps for 512-bit block 
-			
-			end
-
-			// h0 to h7 each are 32 bit hashes, which makes up total 256 bit value
-			// h0 to h7 after compute stage has final computed hash value
-			// write back these h0 to h7 to memory starting from output_addr
-			WRITE: begin
 				
-			end
-			
-		endcase
+				// Fetch message in 512-bit block size
+				// For each of 512-bit block initiate hash value computation
 
+				// For each block compute hash function
+				// Go back to BLOCK stage after each block hash computation is completed and if
+				// there are still number of message blocks available in memory otherwise
+				// move to WRITE stage
+				COMPUTE: begin
+					$display("COMPUTE");
+				// 64 processing rounds steps for 512-bit block 
+				end
+
+				// h0 to h7 each are 32 bit hashes, which makes up total 256 bit value
+				// h0 to h7 after compute stage has final computed hash value
+				// write back these h0 to h7 to memory starting from output_addr
+				WRITE: begin
+					
+				end
+				
+			endcase
+			done <= (state == IDLE);
+		end
 	end
 
 
@@ -208,6 +201,4 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 
 
 	// Generate done when SHA256 hash computation has finished and moved to IDLE state
-	assign done = (state == IDLE);
-
-endmodule
+endmodule: simplified_sha256
