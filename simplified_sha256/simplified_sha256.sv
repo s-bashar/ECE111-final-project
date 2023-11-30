@@ -1,3 +1,7 @@
+// TODO: Merge the two versions so we get the right number of read states (3)
+// Figure out how we are dealing with the functions and the wt variable
+
+
 module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
  input logic  clk, rst_n, start,
  input logic  [15:0] input_addr, hash_addr,
@@ -9,7 +13,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 // (clk, reset_n, start, message_addr, output_addr, done, mem_clk,
 // mem_we, mem_addr, mem_write_data, mem_read_data);
 // FSM state variables 
-	enum logic [2:0] {IDLE, READ, COMPUTE, WRITE} state,next_state;
+	enum logic [2:0] {IDLE, READ, COMPUTE, WRITE} state;
 
 	// parameter integer SIZE = 0; 
 
@@ -19,7 +23,6 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 
 	// Local variables
 	logic [31:0] w[64];
-	logic [31:0] message[16];
 	logic [31:0] wt;
 	logic [31:0] S0,S1;
 	logic [31:0] hash0, hash1, hash2, hash3, hash4, hash5, hash6, hash7;
@@ -30,9 +33,10 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 	logic [15:0] present_addr; //setting present addr
 	logic [31:0] present_write_data;
 	logic [512:0] data_read;
-	logic [ 7:0] tstep;
-	logic current_block;
-	logic [63:0]size_message; //need size of message for last block
+	logic [ 7:0] t;
+	logic [ 7:0] current_block;
+	logic [63:0] size_message; //need size of message for last block
+	logic [ 1:0] count;
 
 	// SHA256 K constants
 	parameter int k[0:63] = '{
@@ -56,28 +60,35 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 	assign memory_write_data = present_write_data;
 
 
-	assign num_blocks = determine_num_blocks(NUM_OF_WORDS); 
-	assign tstep = (i - 1);
+	assign num_blocks = determine_num_blocks(NUM_OF_WORDS);
 
 	// Note : Function defined are for reference purpose. Feel free to add more functions or modify below.
 	// Function to determine number of blocks in memory to fetch
 	function logic [15:0] determine_num_blocks(input logic [31:0] size);
 		determine_num_blocks = (32*NUM_OF_WORDS+64+1+512-1)/512; //rounds up to see how many blocks we need. i.e. we cant implemant 1.8 blocks we need 2 
 	endfunction
-
+	
+	function logic [31:0] word_expansion(input logic [31:0] w15, w2, w16, w7);
+		logic [31:0] S1, S0;
+		begin
+			S0 = ror(w15, 7) ^ ror(w15, 18) ^ ror(w15, 3);
+			S1 = ror(w2, 17) ^ ror(w2, 19) ^ ror(w2, 10);
+			word_expansion = w16 + S0 + w7 + S1;
+		end
+	endfunction
 
 	// SHA256 hash round
 	function logic [255:0] sha256_op(input logic [31:0] a, b, c, d, e, f, g, h, w, input logic [7:0] t);
 		logic [31:0] S1, S0, ch, maj, t1, t2; // internal signals
-	begin
-		S0 = ror(a, 2) ^ ror(a, 13) ^ ror(a, 22);
-		maj = (a & b) ^ (a & c) ^ (b & c);
-		t2 = S0 + maj;
-		S1 = ror(e, 6) ^ ror(e, 11) ^ ror(e, 25);
-		ch = (e & f) ^ ((~e) & g);
-		t1 = h + S1 + ch + k[t] + w;
-		sha256_op = {t1 + t2, a, b, c, d + t1, e, f, g};
-	end
+		begin
+			S0 = ror(a, 2) ^ ror(a, 13) ^ ror(a, 22);
+			maj = (a & b) ^ (a & c) ^ (b & c);
+			t2 = S0 + maj;
+			S1 = ror(e, 6) ^ ror(e, 11) ^ ror(e, 25);
+			ch = (e & f) ^ ((~e) & g);
+			t1 = h + S1 + ch + k[t] + w;
+			sha256_op = {t1 + t2, a, b, c, d + t1, e, f, g};
+		end
 	endfunction
 
 
@@ -117,10 +128,14 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						hash7 <= 32'h5be0cd19;
 						present_addr <= input_addr;
 						size_message <= 32*NUM_OF_WORDS; //get the decimal value for how many bits are in the message
-						size_message <= size_message; //binary representation of this decimal value 
 						j <= 0;
+						t <= 1;
+						state <= READ;
+						current_block <= 1;
+						S0 <= 0;
+						S1 <= 0;
 					end
-					state <= READ;
+					
 				end
 
 				READ: begin
@@ -129,27 +144,36 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						if(next_offset == 0) //pre loading offset 1 now so its ready when we need
 							next_offset <= 1;
 						else if(j < 16) begin //using j that way we can increment next offset freely and not worry about next block's loop, j will take care of that 
-							w[next_offset] <= memory_read_data;//first 16 elemnts(words) of W are coming from memory 
+							w[j] <= memory_read_data;//first 16 elemnts(words) of W are coming from memory 
 							next_offset++;
 							j++;
 						end else begin
-							state <= COMPUTE; //we are ready to move to compute state for this block since it is ready 
+							state <= COMPUTE;
 							j <= 0;
+							t <= 0;
 							current_block++;
+							A <= hash0;
+							B <= hash1;
+							C <= hash2;
+							D <= hash3;
+							E <= hash4;
+							F <= hash5;
+							G <= hash6;
+							H <= hash7;
 						end
 					end else if(current_block == num_blocks) begin //checking to see if we are at last block
 						if(next_offset == 0) //pre loading offset 1 now so its ready when we need
 							next_offset <= 1;
 						else if(j < (NUM_OF_WORDS%16)) begin//num words mod 16 gives us however many words will be going in the last block 
-							w[next_offset] <= memory_read_data;//putting in the remainder of the words left  
+							w[j] <= memory_read_data;//putting in the remainder of the words left  
 							next_offset++;
 							j++;		
 						end else if(j == (NUM_OF_WORDS%16)) begin
-							w[next_offset] <= {1'b1, 31'b0}; //this is the first padding bit which is a 1
+							w[j] <= {1'b1, 31'b0}; //this is the first padding bit which is a 1
 							next_offset++;
 							j++;
 						end else if(j < 14) begin //now we will fill from the 1 till 2 places before the end since we need the last 2 elements (64 bits) to be the size of the message
-							w[next_offset] <= 0;
+							w[j] <= 0;
 							next_offset++;
 							j++;
 						end else if(j == 14) begin //first 32 bits of input message size 
@@ -163,7 +187,16 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						end else begin
 							state <= COMPUTE;
 							j <= 0;
+							t <= 0;
 							current_block++;
+							A <= hash0;
+							B <= hash1;
+							C <= hash2;
+							D <= hash3;
+							E <= hash4;
+							F <= hash5;
+							G <= hash6;
+							H <= hash7;
 						end
 					end
 				end
@@ -175,8 +208,33 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 				// Go back to BLOCK stage after each block hash computation is completed and if
 				// there are still number of message blocks available in memory otherwise
 				// move to WRITE stage
-				COMPUTE: begin
-					state <= READ;
+				COMPUTE: begin 
+
+					if (t < 16) 
+						wt <= w[t];
+					else if (t < 64) begin 
+						wt <= word_expansion(w[t-15], w[t-2], w[t-16], w[t-7]);
+						w[t-1] <= wt;
+					end else if (t == 64) begin
+						hash0 <= A + hash0;
+						hash1 <= B + hash1;
+						hash2 <= C + hash2;
+						hash3 <= D + hash3;
+						hash4 <= E + hash4;
+						hash5 <= F + hash5;
+						hash6 <= G + hash6;
+						hash7 <= H + hash7;
+						w[t-1] <= wt;
+						if (current_block == num_blocks)
+							state <= WRITE;
+						else
+							state <= READ;
+					end
+					if(t!=0)
+						{A,B,C,D,E,F,G,H} <= sha256_op(A,B,C,D,E,F,G,H,wt,t-1);
+					
+					t++;
+					
 				end
 
 				// h0 to h7 each are 32 bit hashes, which makes up total 256 bit value
