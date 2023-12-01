@@ -1,4 +1,3 @@
-// TODO: Merge the two versions so we get the right number of read states (3)
 // Figure out how we are dealing with the functions and the wt variable
 
 
@@ -36,7 +35,6 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 	logic [ 7:0] t;
 	logic [ 7:0] current_block;
 	logic [63:0] size_message; //need size of message for last block
-	logic [ 1:0] count;
 
 	// SHA256 K constants
 	parameter int k[0:63] = '{
@@ -160,6 +158,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 							F <= hash5;
 							G <= hash6;
 							H <= hash7;
+							wt <= 0;
 						end
 					end else if(current_block == num_blocks) begin //checking to see if we are at last block
 						if(next_offset == 0) //pre loading offset 1 now so its ready when we need
@@ -177,11 +176,11 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 							next_offset++;
 							j++;
 						end else if(j == 14) begin //first 32 bits of input message size 
-							w[next_offset] <= size_message[63:32];
+							w[j] <= size_message[63:32];
 							next_offset++;
 							j++;
 						end else if(j == 15) begin //last 32 bits of input message size
-							w[next_offset] <= size_message[31:0];
+							w[j] <= size_message[31:0];
 							next_offset++;
 							j++;
 						end else begin
@@ -197,6 +196,7 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 							F <= hash5;
 							G <= hash6;
 							H <= hash7;
+							wt <= 0;
 						end
 					end
 				end
@@ -225,15 +225,15 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						hash6 <= G + hash6;
 						hash7 <= H + hash7;
 						w[t-1] <= wt;
-						if (current_block == num_blocks)
+						if (current_block > num_blocks)
 							state <= WRITE;
 						else
 							state <= READ;
 					end
 					if(t!=0)
 						{A,B,C,D,E,F,G,H} <= sha256_op(A,B,C,D,E,F,G,H,wt,t-1);
-					
 					t++;
+					
 					
 				end
 
