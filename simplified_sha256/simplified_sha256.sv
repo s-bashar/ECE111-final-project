@@ -259,35 +259,36 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 				// h0 to h7 after compute stage has final computed hash value
 				// write back these h0 to h7 to memory starting from output_addr
 				WRITE: begin
-						hash0 <= hash0;
+						/*hash0 <= hash0;
 						hash1 <= hash1;
 						hash2 <= hash2;
 						hash3 <= hash3;
 						hash4 <= hash4;
 						hash5 <= hash5;
 						hash6 <= hash6;
-						hash7 <= hash7;
+						hash7 <= hash7;*/
 						
 						
 					case(i)
 						0: begin
 							present_write_data <= hash0;
 							$display("writing data %h to %h",hash0,memory_addr);
+							
 					
 						end
 						1: begin
 							present_write_data <= hash1;
-							$display("writing data %h to %h",hash1,memory_addr);
+							//$display("writing data %h to %h",hash1,memory_addr);
 						
 						end
 						2: begin
 							present_write_data <= hash2;
-							$display("writing data %h to %h",hash2,memory_addr);
+							//$display("writing data %h to %h",hash2,memory_addr);
 						
 						end
 						3: begin
 							present_write_data <= hash3;
-							$display("writing data %h to %h",hash3,memory_addr);
+							//$display("writing data %h to %h",hash3,memory_addr);
 							
 						end
 						4: begin
@@ -309,17 +310,21 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						8:begin
 							state <= IDLE;
 						end
-						
-					endcase
-					i++;
+					
+				endcase
+				i<=i+1;
+					if(i!=0)begin
 					next_offset++;
-				end
+			end
+		end
 				
 			endcase
-			done <= (state == IDLE);
+			
+			
 		end
+	
 	end
-
+assign done=(state==IDLE);
 
 
 	// SHA-256 FSM 
