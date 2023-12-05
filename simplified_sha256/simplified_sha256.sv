@@ -229,9 +229,13 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						hash6 <= G + hash6;
 						hash7 <= H + hash7;
 						
-						if (current_block > num_blocks)
+						if (current_block > num_blocks)begin
 							state <= WRITE;
-						else
+							i <= 0;
+							next_offset<=0;
+							enable_write <= 1;
+							present_addr <= hash_addr;
+						end else
 							state <= READ;
 					end
 					if(t!=0&&t<17) begin //created to condition that both go into sha operation for each t<x case 
@@ -255,7 +259,59 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 				// h0 to h7 after compute stage has final computed hash value
 				// write back these h0 to h7 to memory starting from output_addr
 				WRITE: begin
-					
+						hash0 <= hash0;
+						hash1 <= hash1;
+						hash2 <= hash2;
+						hash3 <= hash3;
+						hash4 <= hash4;
+						hash5 <= hash5;
+						hash6 <= hash6;
+						hash7 <= hash7;
+						
+						
+					case(i)
+						0: begin
+							present_write_data <= hash0;
+							$display("writing data %h to %h",hash0,memory_addr);
+							next_offset <= i;
+						end
+						1: begin
+							present_write_data <= hash1;
+							$display("writing data %h to %h",hash1,memory_addr);
+							next_offset <= i;
+						end
+						2: begin
+							present_write_data <= hash2;
+							$display("writing data %h to %h",hash2,memory_addr);
+							next_offset <= i;
+						end
+						3: begin
+							present_write_data <= hash3;
+							$display("writing data %h to %h",hash3,memory_addr);
+							next_offset <= i;
+						end
+						4: begin
+							present_write_data <= hash4;
+							next_offset <= i;
+						end
+						5: begin
+							present_write_data <= hash5;
+							next_offset <= i;
+						end
+						6: begin
+							present_write_data <= hash6;
+							next_offset <= i;
+						end
+						7:begin
+							present_write_data <= hash7;
+							next_offset <= i;
+						end 
+						8:begin
+							enable_write <= 0;
+							state <= IDLE;
+						end
+					endcase
+					i++;
 				end
 				
 			endcase
