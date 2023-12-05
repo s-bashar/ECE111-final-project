@@ -273,45 +273,46 @@ module simplified_sha256 #(parameter integer NUM_OF_WORDS = 40)(
 						0: begin
 							present_write_data <= hash0;
 							$display("writing data %h to %h",hash0,memory_addr);
-							next_offset <= i;
+					
 						end
 						1: begin
 							present_write_data <= hash1;
 							$display("writing data %h to %h",hash1,memory_addr);
-							next_offset <= i;
+						
 						end
 						2: begin
 							present_write_data <= hash2;
 							$display("writing data %h to %h",hash2,memory_addr);
-							next_offset <= i;
+						
 						end
 						3: begin
 							present_write_data <= hash3;
 							$display("writing data %h to %h",hash3,memory_addr);
-							next_offset <= i;
+							
 						end
 						4: begin
 							present_write_data <= hash4;
-							next_offset <= i;
+							
 						end
 						5: begin
 							present_write_data <= hash5;
-							next_offset <= i;
+						
 						end
 						6: begin
 							present_write_data <= hash6;
-							next_offset <= i;
+							
 						end
 						7:begin
 							present_write_data <= hash7;
-							next_offset <= i;
+							
 						end 
 						8:begin
-							enable_write <= 0;
 							state <= IDLE;
 						end
+						
 					endcase
 					i++;
+					next_offset++;
 				end
 				
 			endcase
