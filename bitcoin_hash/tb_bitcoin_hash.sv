@@ -12,7 +12,7 @@ logic   [31:0] mem_read_data;
 logic   [31:0] dpsram[0:16383]; // each row has 32 bits
 logic   [31:0] dpsram_tb[0:16383]; // for result testing, testbench only
 
-logic   [31:0] message_seed = 32'h01234675; // modify message_seed to test your design
+logic   [31:0] message_seed = 32'h01234567; // modify message_seed to test your design
 
 logic   [31:0] h0[NUM_NONCES];
 logic   [31:0] h1[NUM_NONCES];
@@ -32,9 +32,9 @@ logic   [31:0] w[64];
 int            num_errors;
 int            cycles;
 int            m, n, t;
-
+parameter integer NUM_OF_WORDS = 20; 
 // instantiate your design
-bitcoin_hash bitcoin_hash_inst (clk, reset_n, start, message_addr, output_addr, done,
+bitcoin_hash_par #(.NUM_OF_WORDS(NUM_OF_WORDS)) bitcoin_hash_inst (clk, reset_n, start, message_addr, output_addr, done,
     mem_clk, mem_we, mem_addr, mem_write_data, mem_read_data);
 
 // SHA256 K constants
