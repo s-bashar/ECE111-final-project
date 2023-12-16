@@ -28,7 +28,7 @@ parameter integer SIZE = NUM_OF_WORDS * 32;
 logic [7:0] blocks;
 assign blocks = ((NUM_OF_WORDS+2)/16) + 1;
 // instantiate your design
-simplified_sha256 #(.NUM_OF_WORDS(NUM_OF_WORDS)) simplified_sha256_inst 
+simplified_sha256_OPT #(.NUM_OF_WORDS(NUM_OF_WORDS)) simplified_sha256_inst 
 (clk, reset_n, start, message_addr, output_addr, done, mem_clk, mem_we, mem_addr, mem_write_data, mem_read_data);
 
 // SHA256 K constants
