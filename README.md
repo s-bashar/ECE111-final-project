@@ -1,3 +1,12 @@
 # TOC
-
-
+- SHA-256 
+  - [SHA-256](Code/simplified_sha256/simplified_sha256_OPT.sv)
+    - SHA-256 TestBench 
+      - [SHA-256 20W TB](Code/simplified_sha256/tb_simplified_sha256_20w.sv)
+      - [SHA-256 30W TB](Code/simplified_sha256/tb_simplified_sha256_30w.sv)
+      - [SHA-256 40W TB](Code/simplified_sha256/tb_simplified_sha256_40w.sv)
+- BTC Hashing Implementation
+  - [BTC-Hashing-Parallel](Code/bitcoin_hash/bitcoin_hash_par.sv)
+  - [BTC-Hashing-Serial](Code/bitcoin_hash/bitcoin_hash_serial_opt.sv)
+    - BTC Hashing TestBench  
+      - [BTC-Hashing-TB](Code/bitcoin_hash/tb_bitcoin_hash.sv)
