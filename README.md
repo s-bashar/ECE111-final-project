@@ -1,5 +1,5 @@
 # TOC
-- SHA-256 
+- SHA-256 Implementation
   - [SHA-256](Code/simplified_sha256/simplified_sha256_OPT.sv)
     - SHA-256 TestBench 
       - [SHA-256 20W TB](Code/simplified_sha256/tb_simplified_sha256_20w.sv)
